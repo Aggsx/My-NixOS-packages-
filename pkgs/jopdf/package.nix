@@ -19,14 +19,13 @@
   e2fsprogs,
   libgpg-error,
 }:
-
 stdenv.mkDerivation rec {
   pname = "jopdf";
   version = "2.2.0";
 
   src = fetchurl {
     url = "https://cdn.jopdf.com/download/jopdf/jopdf-linux-amd64_setup.deb";
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    hash = "sha256-G993GJOUOh6WsbXcxir1MKrsUFmqCfqA4BtuAyKMsyc=";
   };
 
   nativeBuildInputs = [
@@ -59,47 +58,47 @@ stdenv.mkDerivation rec {
   '';
 
   installPhase = ''
-    mkdir -p $out/opt
-    cp -r opt/jopdf $out/opt/
+        mkdir -p $out/opt
+        cp -r opt/jopdf $out/opt/
 
-    mkdir -p $out/bin
+        mkdir -p $out/bin
 
-    makeWrapper \
-      $out/opt/jopdf/JOPDF \
-      $out/bin/jopdf \
-      --set QT_QPA_PLATFORMTHEME gtk3 \
-      --set GTK_USE_PORTAL 1 \
-      --prefix QT_PLUGIN_PATH : "${libsForQt5.qtstyleplugins}/lib/qt-5/plugins" \
-      --prefix LD_LIBRARY_PATH : "$out/opt/jopdf/lib:${lib.makeLibraryPath [
-        stdenv.cc.cc.lib
-        libglvnd
-        mesa
-        zlib
-        libx11
-        e2fsprogs
-        libgpg-error
-      ]}"
+        makeWrapper \
+          $out/opt/jopdf/JOPDF \
+          $out/bin/jopdf \
+          --set QT_QPA_PLATFORMTHEME gtk3 \
+          --set GTK_USE_PORTAL 1 \
+          --prefix QT_PLUGIN_PATH : "${libsForQt5.qtstyleplugins}/lib/qt-5/plugins" \
+          --prefix LD_LIBRARY_PATH : "$out/opt/jopdf/lib:${lib.makeLibraryPath [
+      stdenv.cc.cc.lib
+      libglvnd
+      mesa
+      zlib
+      libx11
+      e2fsprogs
+      libgpg-error
+    ]}"
 
-    mkdir -p $out/share/applications
+        mkdir -p $out/share/applications
 
-    cat > $out/share/applications/jopdf.desktop <<EOF
-[Desktop Entry]
-Name=JOPDF
-Comment=JOPDF Free PDF Editor, Converter and Reader
-Exec=jopdf
-Icon=jopdf
-Terminal=false
-Type=Application
-Categories=Office;Viewer;
-StartupWMClass=JOPDF
-EOF
+        cat > $out/share/applications/jopdf.desktop <<EOF
+    [Desktop Entry]
+    Name=JOPDF
+    Comment=JOPDF Free PDF Editor, Converter and Reader
+    Exec=jopdf
+    Icon=jopdf
+    Terminal=false
+    Type=Application
+    Categories=Office;Viewer;
+    StartupWMClass=JOPDF
+    EOF
 
-    mkdir -p $out/share/icons/hicolor/256x256/apps
+        mkdir -p $out/share/icons/hicolor/256x256/apps
 
-    if [ -f opt/jopdf/jopdf.png ]; then
-      cp opt/jopdf/jopdf.png \
-        $out/share/icons/hicolor/256x256/apps/jopdf.png
-    fi
+        if [ -f opt/jopdf/jopdf.png ]; then
+          cp opt/jopdf/jopdf.png \
+            $out/share/icons/hicolor/256x256/apps/jopdf.png
+        fi
   '';
 
   postFixup = ''
@@ -110,7 +109,7 @@ EOF
     description = "JOPDF Free PDF Editor, Converter and Reader";
     homepage = "https://www.jopdf.com";
     license = lib.licenses.unfree;
-    platforms = [ "x86_64-linux" ];
+    platforms = ["x86_64-linux"];
     mainProgram = "jopdf";
   };
 }
