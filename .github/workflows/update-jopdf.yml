@@ -1,5 +1,8 @@
 name: update-packages
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -16,10 +19,8 @@ jobs:
           set -uo pipefail
           pkg="jopdf"
           out=$(nix build ".#$pkg" --accept-flake-config 2>&1) || true
-          got=$(printf '%s
-' "$out" | grep -oE 'got:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
-          bad=$(printf '%s
-' "$out" | grep -oE 'specified:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
+          got=$(printf '%s\n' "$out" | grep -oE 'got:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
+          bad=$(printf '%s\n' "$out" | grep -oE 'specified:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
           if [ -n "$got" ] && [ -n "$bad" ] && [ "$got" != "$bad" ]; then
             echo "Fix $pkg: $bad -> $got"
             sed -i "s#$bad#$got#g" "pkgs/$pkg/package.nix"
