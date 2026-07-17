@@ -16,16 +16,21 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Force hash update via nix build
         run: |
-          set -uo pipefail
           pkg="jopdf"
-          out=$(nix build ".#$pkg" --accept-flake-config 2>&1) || true
+          
+          # Desactivamos temporalmente pipefail para que el error intencional de nix build no tumbe todo el script
+          set +o pipefail
+          out=$(nix build ".#$pkg" --accept-flake-config 2>&1)
+          set -o pipefail
+          
           got=$(printf '%s\n' "$out" | grep -oE 'got:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
           bad=$(printf '%s\n' "$out" | grep -oE 'specified:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
+          
           if [ -n "$got" ] && [ -n "$bad" ] && [ "$got" != "$bad" ]; then
             echo "Fix $pkg: $bad -> $got"
             sed -i "s#$bad#$got#g" "pkgs/$pkg/package.nix"
           else
-            echo "El hash está al día."
+            echo "El hash está al día o no se pudo extraer de la salida."
           fi
       - name: Format with alejandra
         run: nix run nixpkgs#alejandra -- -q .
