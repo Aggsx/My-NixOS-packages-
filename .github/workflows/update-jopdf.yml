@@ -1,0 +1,39 @@
+name: update-packages
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Force hash update via nix build
+        run: |
+          set -uo pipefail
+          pkg="jopdf"
+          out=$(nix build ".#$pkg" --accept-flake-config 2>&1) || true
+          got=$(printf '%s
+' "$out" | grep -oE 'got:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
+          bad=$(printf '%s
+' "$out" | grep -oE 'specified:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
+          if [ -n "$got" ] && [ -n "$bad" ] && [ "$got" != "$bad" ]; then
+            echo "Fix $pkg: $bad -> $got"
+            sed -i "s#$bad#$got#g" "pkgs/$pkg/package.nix"
+          else
+            echo "El hash está al día."
+          fi
+      - name: Format with alejandra
+        run: nix run nixpkgs#alejandra -- -q .
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: auto/update-jopdf
+          delete-branch: true
+          title: "chore: actualización forzada de hash para JOPDF"
+          commit-message: "chore(jopdf): bump de hash remoto"
+          body: "Actualización del hash para el paquete jopdf obtenida mediante nix build."
+          labels: automated, dependencies
