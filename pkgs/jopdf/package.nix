@@ -26,7 +26,7 @@ stdenv.mkDerivation rec {
 
   src = fetchurl {
     url = "https://cdn.jopdf.com/download/jopdf/jopdf-linux-amd64_setup.deb";
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    hash = "sha256-G993GJOUOh6WsbXcxir1MKrsUFmqCfqA4BtuAyKMsyc=";
   };
 
   nativeBuildInputs = [
@@ -94,12 +94,19 @@ Categories=Office;Viewer;
 StartupWMClass=JOPDF
 EOF
 
+    # ---- AQUÍ ESTÁ LA LOGICA DEL ICONO QUE SÍ FUNCIONABA ----
     mkdir -p $out/share/icons/hicolor/256x256/apps
 
-    if [ -f opt/jopdf/jopdf.png ]; then
-      cp opt/jopdf/jopdf.png \
-        $out/share/icons/hicolor/256x256/apps/jopdf.png
+    if [ -f usr/share/pixmaps/jopdf.png ]; then
+      cp usr/share/pixmaps/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
+    elif [ -f usr/share/icons/hicolor/256x256/apps/jopdf.png ]; then
+      cp usr/share/icons/hicolor/256x256/apps/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
+    elif [ -f opt/jopdf/jopdf.png ]; then
+      cp opt/jopdf/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
+    else
+      ln -s $out/opt/jopdf/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png || true
     fi
+    # --------------------------------------------------------
   '';
 
   postFixup = ''
