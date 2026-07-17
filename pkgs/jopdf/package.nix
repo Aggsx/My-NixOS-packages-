@@ -27,7 +27,7 @@ stdenv.mkDerivation rec {
     hash = "sha256-G993GJOUOh6WsbXcxir1MKrsUFmqCfqA4BtuAyKMsyc=";
   };
 
-  nativeBuildInputs = [ dpkg makeWrapper qt5.wrapQtAppsHook autoPatchelfHook ];
+  nativeBuildInputs = [dpkg makeWrapper qt5.wrapQtAppsHook autoPatchelfHook];
 
   buildInputs = [
     stdenv.cc.cc.lib
@@ -95,6 +95,6 @@ stdenv.mkDerivation rec {
     homepage = "https://www.jopdf.com";
     license = lib.licenses.unfree;
     maintainers = [];
-    platforms = [ "x86_64-linux" ];
+    platforms = ["x86_64-linux"];
   };
 }
