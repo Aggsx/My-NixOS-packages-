@@ -20,14 +20,15 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Fix stale hashes after version bump
+        # Aquí forzamos de forma global a Nix a aceptar software privativo en este paso
+        env:
+          NIXPKGS_ALLOW_UNFREE: "1"
         run: |
           set -uo pipefail
           pkg="jopdf"
           for attempt in 1 2 3; do
-            # Agregamos obligatoriamente --impure por si tu Flake depende de variables locales
             out=$(nix build ".#$pkg" --accept-flake-config --impure 2>&1) && break
             
-            # Imprimimos TODO el output en el log para ver qué está pasando realmente en la web de GitHub
             echo "=== OUTPUT DE NIX BUILD (Intento $attempt) ==="
             echo "$out"
             echo "=============================================="
