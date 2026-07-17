@@ -22,11 +22,11 @@
         }
       );
 
-      # LA SOLUCIÓN: Usamos final.callPackage para evitar la recursión infinita
+      # LA SOLUCIÓN REAL: Usamos "${self}/..." para fijar la ruta absoluta del repositorio
       overlays.default = final: prev: {
-        jopdf = final.callPackage ./pkgs/jopdf/package.nix {};
-        # Cuando agregues más paquetes en el futuro, solo los sumas aquí abajo de la misma forma:
-        # otro-paquete = final.callPackage ./pkgs/otro-paquete/package.nix {};
+        jopdf = final.callPackage "${self}/pkgs/jopdf/package.nix" {};
+        # Cuando agregues más paquetes en el futuro, los pones aquí usando ${self} igual:
+        # otro-paquete = final.callPackage "${self}/pkgs/otro-paquete/package.nix" {};
       };
     };
 }
