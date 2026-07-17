@@ -1,39 +1,47 @@
 name: update-packages
+
 on:
   push:
     branches:
       - main
   workflow_dispatch: {}
+
 permissions:
   contents: write
   pull-requests: write
+
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Force hash update via nix build
+
+      - name: Fix stale hashes after version bump
         run: |
+          set -uo pipefail
           pkg="jopdf"
-          
-          # Desactivamos temporalmente pipefail para que el error intencional de nix build no tumbe todo el script
-          set +o pipefail
-          out=$(nix build ".#$pkg" --accept-flake-config 2>&1)
-          set -o pipefail
-          
-          got=$(printf '%s\n' "$out" | grep -oE 'got:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
-          bad=$(printf '%s\n' "$out" | grep -oE 'specified:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
-          
-          if [ -n "$got" ] && [ -n "$bad" ] && [ "$got" != "$bad" ]; then
-            echo "Fix $pkg: $bad -> $got"
-            sed -i "s#$bad#$got#g" "pkgs/$pkg/package.nix"
-          else
-            echo "El hash está al día o no se pudo extraer de la salida."
-          fi
+          for attempt in 1 2 3; do
+            # Si el build es exitoso, rompe el bucle. Si falla por hash, continúa extrayendo strings.
+            out=$(nix build ".#$pkg" --accept-flake-config 2>&1) && break
+            
+            got=$(printf '%s\n' "$out" | grep -oE 'got:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
+            bad=$(printf '%s\n' "$out" | grep -oE 'specified:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
+            
+            if [ -n "$got" ] && [ -n "$bad" ] && [ "$got" != "$bad" ]; then
+              echo "Fix $pkg: $bad -> $got"
+              sed -i "s#$bad#$got#g" "pkgs/$pkg/package.nix"
+            else
+              printf '%s\n' "$out" | tail -20
+              break
+            fi
+          done
+
       - name: Format with alejandra
         run: nix run nixpkgs#alejandra -- -q .
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
