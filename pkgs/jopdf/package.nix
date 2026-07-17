@@ -25,8 +25,8 @@ stdenv.mkDerivation rec {
   version = "2.2.0";
 
   src = fetchurl {
-    url = "file:///home/axelnixos/Descargas/jopdf-linux-amd64_setup.deb";
-    hash = "sha256-G993GJOUOh6WsbXcxir1MKrsUFmqCfqA4BtuAyKMsyc=";
+    url = "https://cdn.jopdf.com/download/jopdf/jopdf-linux-amd64_setup.deb";
+    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
   };
 
   nativeBuildInputs = [
