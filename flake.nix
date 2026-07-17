@@ -22,10 +22,11 @@
         }
       );
 
-      overlays.default = final: prev: 
-        let
-          repoPkgs = self.packages.${prev.system} or {};
-        in
-          builtins.removeAttrs repoPkgs [ "default" ];
+      # LA SOLUCIÓN: Usamos final.callPackage para evitar la recursión infinita
+      overlays.default = final: prev: {
+        jopdf = final.callPackage ./pkgs/jopdf/package.nix {};
+        # Cuando agregues más paquetes en el futuro, solo los sumas aquí abajo de la misma forma:
+        # otro-paquete = final.callPackage ./pkgs/otro-paquete/package.nix {};
+      };
     };
 }
