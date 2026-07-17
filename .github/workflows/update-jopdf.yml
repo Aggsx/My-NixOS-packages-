@@ -1,9 +1,8 @@
 name: update-packages
 
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: "17 6 * * 1"
   workflow_dispatch: {}
 
 permissions:
@@ -19,41 +18,44 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - name: Fix stale hashes after version bump
-        # Aquí forzamos de forma global a Nix a aceptar software privativo en este paso
+      - name: Force hash update via nix build
         env:
           NIXPKGS_ALLOW_UNFREE: "1"
         run: |
-          set -uo pipefail
           pkg="jopdf"
-          for attempt in 1 2 3; do
-            out=$(nix build ".#$pkg" --accept-flake-config --impure 2>&1) && break
-            
-            echo "=== OUTPUT DE NIX BUILD (Intento $attempt) ==="
-            echo "$out"
-            echo "=============================================="
-            
-            got=$(printf '%s\n' "$out" | grep -oE 'got:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
-            bad=$(printf '%s\n' "$out" | grep -oE 'specified:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
-            
-            if [ -n "$got" ] && [ -n "$bad" ] && [ "$got" != "$bad" ]; then
-              echo "Fix $pkg: $bad -> $got"
-              sed -i "s#$bad#$got#g" "pkgs/$pkg/package.nix"
-            else
-              echo "No se detectó diferencia de hashes. Terminando bucle."
-              exit 1
-            fi
-          done
+          file="pkgs/$pkg/package.nix"
+          
+          # Forzar las A's de mentira para obligar a Nix a darnos el hash nuevo
+          sed -i 's#hash = "sha256-[A-Za-z0-9+/=]\{43\}=";#hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";#g' "$file"
+
+          build_output=$(nix build ".#$pkg" --accept-flake-config --impure 2>&1 || true)
+          real_hash=$(echo "$build_output" | grep -oE "got:[[:space:]]*sha256-[A-Za-z0-9+/=]+" | cut -d: -f2 | xargs)
+
+          if [ -n "$real_hash" ] && [ "$real_hash" != "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" ]; then
+            sed -i "s#sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=#$real_hash#g" "$file"
+          else
+            echo "Error: No se pudo capturar el hash real."
+            exit 1
+          fi
 
       - name: Format with alejandra
         run: nix run nixpkgs#alejandra -- -q .
 
       - name: Create Pull Request
+        id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           branch: auto/update-jopdf
           delete-branch: true
-          title: "chore: actualización forzada de hash para JOPDF"
-          commit-message: "chore(jopdf): bump de hash remoto"
-          body: "Actualización del hash para el paquete jopdf obtenida mediante nix build."
+          title: "chore: actualización automática de hash para JOPDF"
+          commit-message: "chore(jopdf): bump automático de hash remoto"
+          body: "Actualización automática del hash usando Nix Actions."
           labels: automated, dependencies
+
+      - name: Auto-merge por CLI
+        if: steps.cpr.outputs.pull-request-operation == 'created' || steps.cpr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Fusionando el PR #${{ steps.cpr.outputs.pull-request-number }} de forma automática..."
+          gh pr merge "${{ steps.cpr.outputs.pull-request-number }}" --merge --delete-branch
