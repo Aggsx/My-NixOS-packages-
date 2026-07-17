@@ -19,7 +19,6 @@
   e2fsprogs,
   libgpg-error,
 }:
-
 stdenv.mkDerivation rec {
   pname = "jopdf";
   version = "2.2.0";
@@ -59,54 +58,54 @@ stdenv.mkDerivation rec {
   '';
 
   installPhase = ''
-    mkdir -p $out/opt
-    cp -r opt/jopdf $out/opt/
+        mkdir -p $out/opt
+        cp -r opt/jopdf $out/opt/
 
-    mkdir -p $out/bin
+        mkdir -p $out/bin
 
-    makeWrapper \
-      $out/opt/jopdf/JOPDF \
-      $out/bin/jopdf \
-      --set QT_QPA_PLATFORMTHEME gtk3 \
-      --set GTK_USE_PORTAL 1 \
-      --prefix QT_PLUGIN_PATH : "${libsForQt5.qtstyleplugins}/lib/qt-5/plugins" \
-      --prefix LD_LIBRARY_PATH : "$out/opt/jopdf/lib:${lib.makeLibraryPath [
-        stdenv.cc.cc.lib
-        libglvnd
-        mesa
-        zlib
-        libx11
-        e2fsprogs
-        libgpg-error
-      ]}"
+        makeWrapper \
+          $out/opt/jopdf/JOPDF \
+          $out/bin/jopdf \
+          --set QT_QPA_PLATFORMTHEME gtk3 \
+          --set GTK_USE_PORTAL 1 \
+          --prefix QT_PLUGIN_PATH : "${libsForQt5.qtstyleplugins}/lib/qt-5/plugins" \
+          --prefix LD_LIBRARY_PATH : "$out/opt/jopdf/lib:${lib.makeLibraryPath [
+      stdenv.cc.cc.lib
+      libglvnd
+      mesa
+      zlib
+      libx11
+      e2fsprogs
+      libgpg-error
+    ]}"
 
-    mkdir -p $out/share/applications
+        mkdir -p $out/share/applications
 
-    cat > $out/share/applications/jopdf.desktop <<EOF
-[Desktop Entry]
-Name=JOPDF
-Comment=JOPDF Free PDF Editor, Converter and Reader
-Exec=jopdf
-Icon=jopdf
-Terminal=false
-Type=Application
-Categories=Office;Viewer;
-StartupWMClass=JOPDF
-EOF
+        cat > $out/share/applications/jopdf.desktop <<EOF
+    [Desktop Entry]
+    Name=JOPDF
+    Comment=JOPDF Free PDF Editor, Converter and Reader
+    Exec=jopdf
+    Icon=jopdf
+    Terminal=false
+    Type=Application
+    Categories=Office;Viewer;
+    StartupWMClass=JOPDF
+    EOF
 
-    # ---- AQUÍ ESTÁ LA LOGICA DEL ICONO QUE SÍ FUNCIONABA ----
-    mkdir -p $out/share/icons/hicolor/256x256/apps
+        # ---- AQUÍ ESTÁ LA LOGICA DEL ICONO QUE SÍ FUNCIONABA ----
+        mkdir -p $out/share/icons/hicolor/256x256/apps
 
-    if [ -f usr/share/pixmaps/jopdf.png ]; then
-      cp usr/share/pixmaps/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
-    elif [ -f usr/share/icons/hicolor/256x256/apps/jopdf.png ]; then
-      cp usr/share/icons/hicolor/256x256/apps/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
-    elif [ -f opt/jopdf/jopdf.png ]; then
-      cp opt/jopdf/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
-    else
-      ln -s $out/opt/jopdf/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png || true
-    fi
-    # --------------------------------------------------------
+        if [ -f usr/share/pixmaps/jopdf.png ]; then
+          cp usr/share/pixmaps/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
+        elif [ -f usr/share/icons/hicolor/256x256/apps/jopdf.png ]; then
+          cp usr/share/icons/hicolor/256x256/apps/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
+        elif [ -f opt/jopdf/jopdf.png ]; then
+          cp opt/jopdf/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
+        else
+          ln -s $out/opt/jopdf/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png || true
+        fi
+        # --------------------------------------------------------
   '';
 
   postFixup = ''
@@ -117,7 +116,7 @@ EOF
     description = "JOPDF Free PDF Editor, Converter and Reader";
     homepage = "https://www.jopdf.com";
     license = lib.licenses.unfree;
-    platforms = [ "x86_64-linux" ];
+    platforms = ["x86_64-linux"];
     mainProgram = "jopdf";
   };
 }
