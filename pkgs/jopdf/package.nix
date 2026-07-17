@@ -12,25 +12,30 @@
   libxext,
   fontconfig,
   freetype,
-  libglvnd,
-  autoPatchelfHook,
   zlib,
+  cups,
+  libglvnd,
+  mesa,
   e2fsprogs,
   libgpg-error,
 }:
+
 stdenv.mkDerivation rec {
   pname = "jopdf";
-  version = "dynamic";
+  version = "2.2.0";
 
   src = fetchurl {
-    url = "https://cdn.jopdf.com/download/jopdf/jopdf-linux-amd64_setup.deb";
+    url = "file:///home/axelnixos/Descargas/jopdf-linux-amd64_setup.deb";
     hash = "sha256-G993GJOUOh6WsbXcxir1MKrsUFmqCfqA4BtuAyKMsyc=";
   };
 
-  nativeBuildInputs = [ dpkg makeWrapper qt5.wrapQtAppsHook autoPatchelfHook ];
+  nativeBuildInputs = [
+    dpkg
+    makeWrapper
+    qt5.wrapQtAppsHook
+  ];
 
   buildInputs = [
-    stdenv.cc.cc.lib
     qt5.qtbase
     libsForQt5.qtstyleplugins
     libxcb
@@ -39,62 +44,73 @@ stdenv.mkDerivation rec {
     libxext
     fontconfig
     freetype
-    libglvnd
     zlib
+    cups
+    libglvnd
+    mesa
     e2fsprogs
     libgpg-error
   ];
 
-  unpackPhase = "dpkg-deb -x $src .";
+  dontAutoPatchelf = true;
 
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p $out/opt $out/bin $out/share/applications $out/share/icons/hicolor/256x256/apps
-
-    # Copiar los archivos binarios principales
-    cp -r opt/jopdf $out/opt/
-
-    # Crear el wrapper con las variables de entorno necesarias
-    makeWrapper $out/opt/jopdf/JOPDF $out/bin/jopdf \
-      --set QT_QPA_PLATFORMTHEME gtk3 \
-      --set GTK_USE_PORTAL 1 \
-      --prefix QT_PLUGIN_PATH : "${libsForQt5.qtstyleplugins}/lib/qt-5/plugins"
-
-    # Extracción forzada del ícono
-    if [ -f usr/share/pixmaps/jopdf.png ]; then
-      cp usr/share/pixmaps/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
-    elif [ -f usr/share/icons/hicolor/256x256/apps/jopdf.png ]; then
-      cp usr/share/icons/hicolor/256x256/apps/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
-    elif [ -f opt/jopdf/jopdf.png ]; then
-      cp opt/jopdf/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png
-    else
-      ln -s $out/opt/jopdf/jopdf.png $out/share/icons/hicolor/256x256/apps/jopdf.png || true
-    fi
-
-    # Lanzador .desktop bien estructurado
-    cat > $out/share/applications/jopdf.desktop <<EOD
-    [Desktop Entry]
-    Name=JOPDF
-    Comment=JOPDF Free PDF Editor
-    Exec=$out/bin/jopdf
-    Icon=jopdf
-    Terminal=false
-    Type=Application
-    Categories=Office;Viewer;
-    StartupWMClass=JOPDF
-    EOD
-
-    runHook postInstall
+  unpackPhase = ''
+    dpkg-deb -x $src .
   '';
 
-  postFixup = "wrapQtApp $out/bin/jopdf";
+  installPhase = ''
+    mkdir -p $out/opt
+    cp -r opt/jopdf $out/opt/
+
+    mkdir -p $out/bin
+
+    makeWrapper \
+      $out/opt/jopdf/JOPDF \
+      $out/bin/jopdf \
+      --set QT_QPA_PLATFORMTHEME gtk3 \
+      --set GTK_USE_PORTAL 1 \
+      --prefix QT_PLUGIN_PATH : "${libsForQt5.qtstyleplugins}/lib/qt-5/plugins" \
+      --prefix LD_LIBRARY_PATH : "$out/opt/jopdf/lib:${lib.makeLibraryPath [
+        stdenv.cc.cc.lib
+        libglvnd
+        mesa
+        zlib
+        libx11
+        e2fsprogs
+        libgpg-error
+      ]}"
+
+    mkdir -p $out/share/applications
+
+    cat > $out/share/applications/jopdf.desktop <<EOF
+[Desktop Entry]
+Name=JOPDF
+Comment=JOPDF Free PDF Editor, Converter and Reader
+Exec=jopdf
+Icon=jopdf
+Terminal=false
+Type=Application
+Categories=Office;Viewer;
+StartupWMClass=JOPDF
+EOF
+
+    mkdir -p $out/share/icons/hicolor/256x256/apps
+
+    if [ -f opt/jopdf/jopdf.png ]; then
+      cp opt/jopdf/jopdf.png \
+        $out/share/icons/hicolor/256x256/apps/jopdf.png
+    fi
+  '';
+
+  postFixup = ''
+    wrapQtApp $out/bin/jopdf
+  '';
 
   meta = {
-    description = "JOPDF Free PDF Editor";
+    description = "JOPDF Free PDF Editor, Converter and Reader";
     homepage = "https://www.jopdf.com";
     license = lib.licenses.unfree;
-    maintainers = [];
     platforms = [ "x86_64-linux" ];
+    mainProgram = "jopdf";
   };
 }
