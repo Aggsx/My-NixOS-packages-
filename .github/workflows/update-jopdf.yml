@@ -24,8 +24,13 @@ jobs:
           set -uo pipefail
           pkg="jopdf"
           for attempt in 1 2 3; do
-            # Si el build es exitoso, rompe el bucle. Si falla por hash, continúa extrayendo strings.
-            out=$(nix build ".#$pkg" --accept-flake-config 2>&1) && break
+            # Agregamos obligatoriamente --impure por si tu Flake depende de variables locales
+            out=$(nix build ".#$pkg" --accept-flake-config --impure 2>&1) && break
+            
+            # Imprimimos TODO el output en el log para ver qué está pasando realmente en la web de GitHub
+            echo "=== OUTPUT DE NIX BUILD (Intento $attempt) ==="
+            echo "$out"
+            echo "=============================================="
             
             got=$(printf '%s\n' "$out" | grep -oE 'got:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
             bad=$(printf '%s\n' "$out" | grep -oE 'specified:[[:space:]]*sha256-[A-Za-z0-9+/=]+' | head -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+')
@@ -34,8 +39,8 @@ jobs:
               echo "Fix $pkg: $bad -> $got"
               sed -i "s#$bad#$got#g" "pkgs/$pkg/package.nix"
             else
-              printf '%s\n' "$out" | tail -20
-              break
+              echo "No se detectó diferencia de hashes. Terminando bucle."
+              exit 1
             fi
           done
 
