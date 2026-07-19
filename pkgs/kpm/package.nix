@@ -25,6 +25,10 @@ rustPlatform.buildRustPackage rec {
   };
 
   cargoHash = "sha256-Fkj8lRK6pRAvV+spRnpeleq5h5wSUlUiLrACB/l337A=";
+  
+  # Habilitar la feature de interfaz gráfica
+  buildFeatures = [ "gui" ];
+
   doCheck = false;
 
   nativeBuildInputs = [
