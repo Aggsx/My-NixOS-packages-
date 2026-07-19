@@ -1,0 +1,96 @@
+name: update-packages
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Force hash update via nix build
+        env:
+          NIXPKGS_ALLOW_UNFREE: "1"
+        run: |
+          # Iteramos sobre tus dos paquetes actuales
+          for pkg in jopdf kpm; do
+            file="pkgs/$pkg/package.nix"
+            if [ ! -f "$file" ]; then continue; fi
+
+            echo "=== Procesando paquete: $pkg ==="
+
+            if [ "$pkg" = "kpm" ]; then
+              # --- Lógica específica para Rust (kpm) ---
+              
+              # 1. Forzar A's de mentira en el hash del código fuente
+              sed -i 's#hash = "sha256-[A-Za-z0-9+/=]\{43\}=";#hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";#g' "$file"
+              
+              # Intentar compilar para obtener el hash real del código fuente
+              build_output=$(nix build ".#$pkg" --accept-flake-config --impure 2>&1 || true)
+              real_src_hash=$(echo "$build_output" | grep -oE "got:[[:space:]]*sha256-[A-Za-z0-9+/=]+" | head -n1 | cut -d: -f2 | xargs)
+              
+              if [ -n "$real_src_hash" ] && [ "$real_src_hash" != "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" ]; then
+                sed -i "s#sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=#$real_src_hash#g" "$file"
+              fi
+
+              # 2. Forzar A's de mentira en el cargoHash
+              sed -i 's#cargoHash = "sha256-[A-Za-z0-9+/=]\{43\}=";#cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";#g' "$file"
+              
+              # Volver a compilar para obtener el hash real de las dependencias de Cargo
+              build_output_cargo=$(nix build ".#$pkg" --accept-flake-config --impure 2>&1 || true)
+              real_cargo_hash=$(echo "$build_output_cargo" | grep -oE "got:[[:space:]]*sha256-[A-Za-z0-9+/=]+" | head -n1 | cut -d: -f2 | xargs)
+              
+              if [ -n "$real_cargo_hash" ] && [ "$real_cargo_hash" != "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" ]; then
+                sed -i "s#cargoHash = \"sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\";#cargoHash = \"$real_cargo_hash\";#g" "$file"
+              else
+                echo "Error: No se pudo capturar el cargoHash real."
+                exit 1
+              fi
+
+            else
+              # --- Lógica estándar para tu paquete genérico (jopdf) ---
+              sed -i 's#hash = "sha256-[A-Za-z0-9+/=]\{43\}=";#hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";#g' "$file"
+
+              build_output=$(nix build ".#$pkg" --accept-flake-config --impure 2>&1 || true)
+              real_hash=$(echo "$build_output" | grep -oE "got:[[:space:]]*sha256-[A-Za-z0-9+/=]+" | head -n1 | cut -d: -f2 | xargs)
+
+              if [ -n "$real_hash" ] && [ "$real_hash" != "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" ]; then
+                sed -i "s#sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=#$real_hash#g" "$file"
+              else
+                echo "Error: No se pudo capturar el hash real para $pkg."
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Format with alejandra
+        run: nix run nixpkgs#alejandra -- -q .
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: auto/update-packages
+          delete-branch: true
+          title: "chore: actualización automática de hashes remotos"
+          commit-message: "chore(deps): bump automático de hashes en el repositorio"
+          body: "Actualización automática de los hashes utilizando Nix Actions en el ciclo semanal."
+          labels: automated, dependencies
+
+      - name: Auto-merge por CLI
+        if: steps.cpr.outputs.pull-request-operation == 'created' || steps.cpr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Fusionando el PR #${{ steps.cpr.outputs.pull-request-number }} de forma automática..."
+          gh pr merge "${{ steps.cpr.outputs.pull-request-number }}" --merge --delete-branch
