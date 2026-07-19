@@ -11,6 +11,7 @@
 , gdk-pixbuf
 , graphene
 , openssl
+, makeDesktopItem
 }:
 
 rustPlatform.buildRustPackage rec {
@@ -47,8 +48,22 @@ rustPlatform.buildRustPackage rec {
     openssl
   ];
 
+  desktopItem = makeDesktopItem {
+    name = "kpm-gui";
+    exec = "kpm-gui";
+    icon = "system-software-install";
+    desktopName = "Kore Package Manager";
+    genericName = "Package Manager";
+    categories = [ "System" "Settings" ];
+    comment = "A minimalist and universal program manager for Linux redesigned in Rust";
+  };
+
   preBuild = ''
     export PKG_CONFIG_PATH="${gtk4.dev}/lib/pkgconfig:${libadwaita.dev}/lib/pkgconfig:${openssl.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
+  '';
+
+  postInstall = ''
+    install -Dm644 ${desktopItem}/share/applications/* -t $out/share/applications/
   '';
 
   meta = with lib; {
