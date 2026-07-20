@@ -28,7 +28,7 @@
     # LA SOLUCIÓN REAL: Usamos "${self}/..." para fijar la ruta absoluta del repositorio
     overlays.default = final: prev: {
       jopdf = final.callPackage "${self}/pkgs/jopdf/package.nix" {};
-      kpm = final.callPackage "${self}/pkgs/kpm/package.nix" {}; 
+      kpm = final.callPackage "${self}/pkgs/kpm/package.nix" {};
       # Cuando agregues más paquetes en el futuro, los pones aquí usando ${self} igual:
       # otro-paquete = final.callPackage "${self}/pkgs/otro-paquete/package.nix" {};
     };

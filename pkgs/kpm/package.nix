@@ -1,19 +1,19 @@
-{ lib
-, rustPlatform
-, fetchFromGitHub
-, pkg-config
-, wrapGAppsHook4
-, gtk4
-, libadwaita
-, glib
-, pango
-, cairo
-, gdk-pixbuf
-, graphene
-, openssl
-, makeDesktopItem
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+  pkg-config,
+  wrapGAppsHook4,
+  gtk4,
+  libadwaita,
+  glib,
+  pango,
+  cairo,
+  gdk-pixbuf,
+  graphene,
+  openssl,
+  makeDesktopItem,
 }:
-
 rustPlatform.buildRustPackage rec {
   pname = "kpm";
   version = "4.0.0";
@@ -26,9 +26,9 @@ rustPlatform.buildRustPackage rec {
   };
 
   cargoHash = "sha256-Fkj8lRK6pRAvV+spRnpeleq5h5wSUlUiLrACB/l337A=";
-  
+
   # Habilitar la feature de interfaz gráfica
-  buildFeatures = [ "gui" ];
+  buildFeatures = ["gui"];
 
   doCheck = false;
 
@@ -54,7 +54,7 @@ rustPlatform.buildRustPackage rec {
     icon = "system-software-install";
     desktopName = "Kore Package Manager";
     genericName = "Package Manager";
-    categories = [ "System" "Settings" ];
+    categories = ["System" "Settings"];
     comment = "A minimalist and universal program manager for Linux redesigned in Rust";
   };
 
